@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // 后端地址 (HTTP)
 // ⚠️ 注意：如果你的 Lark/Feishu 客户端强制 HTTPS，这个 HTTP 请求可能会被 Block (Mixed Content)
-const API_BASE = 'https://www.inkflow.chat/api';
+const API_BASE = (import.meta.env.VITE_API_BASE ?? 'https://www.inkflow.chat/api').replace(/\/+$/, '');
 
 // 定义返回的数据结构
 export interface XhsNoteData {

@@ -322,10 +322,16 @@ export default function App() {
   const [compSeverity, setCompSeverity] = useState(3);
   const [compLoading, setCompLoading] = useState(false);
   const [compResult, setCompResult] = useState<any | null>(null);
+  const [compModalVisible, setCompModalVisible] = useState(false);
+
+  const aiBaseUrl = (import.meta.env.VITE_COMPLIANCE_AI_BASE_URL ?? '').trim().replace(/\/+$/, '');
+  const aiApiKey = (import.meta.env.VITE_COMPLIANCE_AI_API_KEY ?? '').trim();
+  const aiModel = (import.meta.env.VITE_COMPLIANCE_AI_MODEL ?? '').trim();
 
   const handleComplianceCheck = async () => {
     setCompLoading(true);
     setCompResult(null);
+    setCompModalVisible(false);
     try {
       const res = await apiComplianceCheck(apiBase, {
         text: compText,
@@ -336,6 +342,10 @@ export default function App() {
         enable_ai: compEnableAi,
         // AI config is read from server .env:
         // COMPLIANCE_AI_BASE_URL / COMPLIANCE_AI_API_KEY / COMPLIANCE_AI_MODEL
+        ai_base_url: aiBaseUrl || undefined,
+        ai_api_key: aiApiKey || undefined,
+        ai_model: aiModel || undefined,
+        
       });
       setCompResult(res);
       Toast.success('检测完成');
@@ -345,6 +355,13 @@ export default function App() {
       setCompLoading(false);
     }
   };
+
+  // 打开结果弹窗：当 compResult 更新时自动弹出
+  useEffect(() => {
+    if (compResult) {
+      setCompModalVisible(true);
+    }
+  }, [compResult]);
 
   // -------------------------
   // Feature: monitor management
@@ -661,6 +678,71 @@ export default function App() {
                 <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12 }}>{JSON.stringify(compResult, null, 2)}</pre>
               </Card>
             )}
+
+            <Modal
+              title="AI 审核结果"
+              visible={compModalVisible}
+              onOk={() => setCompModalVisible(false)}
+              onCancel={() => setCompModalVisible(false)}
+              centered
+              okText="关闭"
+              cancelButtonProps={{ style: { display: 'none' } }}
+              width={720}
+            >
+              {compResult ? (
+                <div style={{ display: 'grid', rowGap: 12 }}>
+                  <div>
+                    <Text strong>原始文本：</Text>
+                    <Text>{compResult.text || '-'}</Text>
+                  </div>
+                  <div>
+                    <Text strong>AI 状态：</Text>
+                    <Tag color={compResult.ai?.status === 'success' ? 'green' : 'red'}>
+                      {compResult.ai?.status || '-'}
+                    </Tag>
+                    <Text style={{ marginLeft: 8 }}>{compResult.ai?.reason || '-'}</Text>
+                  </div>
+                  <div>
+                    <Text strong>风险类别：</Text>
+                    <Text>{(compResult.ai?.risk_categories || []).join('，') || '无'}</Text>
+                  </div>
+                  <div>
+                    <Text strong>证据：</Text>
+                    <Text>{(compResult.ai?.evidence || []).join('，') || '无'}</Text>
+                  </div>
+                  <div>
+                    <Text strong>改写建议：</Text>
+                    <Text>{compResult.ai?.rewrite || '无'}</Text>
+                  </div>
+                  <div>
+                    <Text strong>改进建议：</Text>
+                    <ul style={{ margin: '4px 0 0 18px', padding: 0 }}>
+                      {(compResult.ai?.suggestions || []).map((s: string, idx: number) => (
+                        <li key={idx}>{s}</li>
+                      ))}
+                    </ul>
+                    {(!compResult.ai?.suggestions || compResult.ai?.suggestions.length === 0) && <Text>无</Text>}
+                  </div>
+                  <Divider margin="8px" />
+                  <div>
+                    <Text strong>最终判定：</Text>
+                    <Tag color={compResult.final?.passed ? 'green' : 'red'}>
+                      {compResult.final?.passed ? '通过' : '不通过'}
+                    </Tag>
+                    <Text style={{ marginLeft: 8 }}>
+                      risk_level={compResult.final?.risk_level ?? '-'} categories={(compResult.final?.categories || []).join(', ') || '-'}
+                    </Text>
+                  </div>
+                  <Divider margin="8px" />
+                  <Text type="tertiary" size="small">原始返回（JSON）：</Text>
+                  <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, margin: 0 }}>
+                    {JSON.stringify(compResult, null, 2)}
+                  </pre>
+                </div>
+              ) : (
+                <Text type="tertiary">暂无结果</Text>
+              )}
+            </Modal>
           </Space>
         </TabPane>
 

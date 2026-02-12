@@ -7,7 +7,7 @@ export function getDefaultApiBase(): ApiBase {
   // Fixed base for this frontend build.
   // If you need to override in development, use VITE_API_BASE at build time.
   const env = (import.meta as any)?.env?.VITE_API_BASE as string | undefined;
-  return (env || 'https://www.packetrider.tech/api').replace(/\/+$/, '');
+  return (env || 'https://www.inkflow.chat/api').replace(/\/+$/, '');
 }
 
 export function setDefaultApiBase(base: string) {
