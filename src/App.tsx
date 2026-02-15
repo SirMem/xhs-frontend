@@ -31,6 +31,7 @@ import {
   apiCrawlerStatus,
   apiGetLatestDetailResultByUrl,
   apiCountNotesByTimeRange,
+  apiLowFanViral,
   apiComplianceCheck,
   apiMonitorAddNote,
   apiMonitorList,
@@ -310,6 +311,57 @@ export default function App() {
       return `${new Date(n).toLocaleString()} (${n})`;
     } catch {
       return String(ms);
+    }
+  };
+
+  // -------------------------
+  // Feature: low-fan viral
+  // -------------------------
+  const [lfKeyword, setLfKeyword] = useState('');
+  const [lfLikeThr, setLfLikeThr] = useState('1000');
+  const [lfFanThr, setLfFanThr] = useState('2000');
+  const [lfSort, setLfSort] = useState('general');
+  const [lfNoteType, setLfNoteType] = useState('all');
+  const [lfPageSize, setLfPageSize] = useState('20');
+  const [lfMaxResults, setLfMaxResults] = useState('60');
+  const [lfConcurrency, setLfConcurrency] = useState('5');
+  const [lfCacheTtl, setLfCacheTtl] = useState('86400');
+  const [lfLoading, setLfLoading] = useState(false);
+  const [lfResult, setLfResult] = useState<any | null>(null);
+  const [lfResultVisible, setLfResultVisible] = useState(false);
+
+  const handleLowFanViral = async () => {
+    const keyword = lfKeyword.trim();
+    if (!keyword) {
+      Toast.warning('请填写关键词');
+      return;
+    }
+    if (!cookie.trim()) {
+      Toast.warning('建议填写 Cookie 提升成功率');
+    }
+    setLfLoading(true);
+    setLfResult(null);
+    try {
+      const res = await apiLowFanViral(apiBase, {
+        keyword,
+        cookies: cookie.trim(),
+        like_threshold: Number(lfLikeThr) || 0,
+        fan_threshold: Number(lfFanThr) || 0,
+        sort: lfSort as any,
+        note_type: lfNoteType as any,
+        page_size: Number(lfPageSize) || 20,
+        max_results: Number(lfMaxResults) || 60,
+        concurrency: Number(lfConcurrency) || 5,
+        cache_ttl_seconds: Number(lfCacheTtl) || 0,
+        headless: true,
+      });
+      setLfResult(res);
+      setLfResultVisible(true);
+      Toast.success('筛选完成');
+    } catch (e: any) {
+      Toast.error(e?.response?.data?.detail || e?.message || '筛选失败');
+    } finally {
+      setLfLoading(false);
     }
   };
 
@@ -624,6 +676,129 @@ export default function App() {
                   <Divider margin="12px" />
                   <Text type="tertiary" size="small">原始返回（JSON）：</Text>
                   <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, marginTop: 6 }}>{JSON.stringify(countResult, null, 2)}</pre>
+                </div>
+              ) : (
+                <Text type="tertiary">暂无结果</Text>
+              )}
+            </Modal>
+          </Space>
+        </TabPane>
+
+        <TabPane tab="低粉爆款" itemKey="low_fan_viral">
+          <Space vertical spacing="medium" style={{ width: '100%' }}>
+            <Card title="低粉爆款检测（服务端两层过滤）" bodyStyle={{ padding: 20 }}>
+              <Form labelPosition="top">
+                <Form.Label required>关键词</Form.Label>
+                <Input value={lfKeyword} onChange={(v) => setLfKeyword(String(v))} placeholder="例如：考研" />
+
+                <div style={{ height: 12 }} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <Form.Label>点赞阈值（爆款）</Form.Label>
+                    <Input value={lfLikeThr} onChange={(v) => setLfLikeThr(String(v))} placeholder="默认 1000" />
+                  </div>
+                  <div>
+                    <Form.Label>粉丝阈值（低粉）</Form.Label>
+                    <Input value={lfFanThr} onChange={(v) => setLfFanThr(String(v))} placeholder="默认 2000" />
+                  </div>
+                  <div>
+                    <Form.Label>排序</Form.Label>
+                    <Select
+                      value={lfSort}
+                      onChange={(v) => setLfSort(String(v))}
+                      optionList={[
+                        { label: 'general（综合）', value: 'general' },
+                        { label: 'popularity（最热）', value: 'popularity' },
+                        { label: 'most_popular（最热视频）', value: 'most_popular' },
+                        { label: 'latest（最新）', value: 'latest' },
+                        { label: 'popularity_descending（热度降序）', value: 'popularity_descending' },
+                        { label: 'time_descending（时间降序）', value: 'time_descending' },
+                      ]}
+                    />
+                  </div>
+                  <div>
+                    <Form.Label>笔记类型</Form.Label>
+                    <Select
+                      value={lfNoteType}
+                      onChange={(v) => setLfNoteType(String(v))}
+                      optionList={[
+                        { label: 'all（全部）', value: 'all' },
+                        { label: 'video（视频）', value: 'video' },
+                        { label: 'image（图文）', value: 'image' },
+                      ]}
+                    />
+                  </div>
+                  <div>
+                    <Form.Label>每页数量</Form.Label>
+                    <Input value={lfPageSize} onChange={(v) => setLfPageSize(String(v))} placeholder="默认 20" />
+                  </div>
+                  <div>
+                    <Form.Label>最多扫描条数</Form.Label>
+                    <Input value={lfMaxResults} onChange={(v) => setLfMaxResults(String(v))} placeholder="默认 60" />
+                  </div>
+                  <div>
+                    <Form.Label>并发数</Form.Label>
+                    <Input value={lfConcurrency} onChange={(v) => setLfConcurrency(String(v))} placeholder="默认 5" />
+                  </div>
+                  <div>
+                    <Form.Label>粉丝缓存 TTL（秒）</Form.Label>
+                    <Input value={lfCacheTtl} onChange={(v) => setLfCacheTtl(String(v))} placeholder="默认 86400" />
+                  </div>
+                </div>
+
+                <div style={{ height: 16 }} />
+                <Button type="primary" loading={lfLoading} onClick={handleLowFanViral}>
+                  {lfLoading ? '筛选中...' : '开始筛选'}
+                </Button>
+              </Form>
+            </Card>
+
+            <Modal
+              title="筛选结果"
+              visible={Boolean(lfResult) && lfResultVisible}
+              onCancel={() => setLfResultVisible(false)}
+              footer={(
+                <Button type="primary" onClick={() => setLfResultVisible(false)}>
+                  知道了
+                </Button>
+              )}
+              style={{ width: 980, maxWidth: '96vw' }}
+            >
+              {lfResult ? (
+                <div style={{ fontSize: 13, lineHeight: 1.8 }}>
+                  <div><Text strong>关键词：</Text>{String(lfResult.keyword ?? '-')}</div>
+                  <div><Text strong>扫描笔记数：</Text>{String(lfResult.scanned_notes ?? '-')}</div>
+                  <div><Text strong>爆款候选：</Text>{String(lfResult.viral_candidates ?? '-')}</div>
+                  <div><Text strong>查询作者数：</Text>{String(lfResult.creators_queried ?? '-')}</div>
+                  <div><Text strong>最终结果：</Text>{String((lfResult.results || []).length)}</div>
+
+                  <Divider margin="12px" />
+                  <Table
+                    dataSource={lfResult.results || []}
+                    pagination={{ pageSize: 20 }}
+                    rowKey="note_id"
+                    columns={[
+                      { title: 'note_id', dataIndex: 'note_id', width: 160 },
+                      { title: '标题', dataIndex: 'title', width: 200, render: (t: any) => <Text ellipsis={{ showTooltip: true }}>{String(t || '')}</Text> },
+                      { title: '点赞', dataIndex: 'liked_count', width: 90 },
+                      { title: '粉丝', dataIndex: 'fans', width: 90 },
+                      { title: '作者', dataIndex: 'nickname', width: 120, render: (t: any) => <Text ellipsis={{ showTooltip: true }}>{String(t || '')}</Text> },
+                      {
+                        title: '链接',
+                        dataIndex: 'note_url',
+                        width: 240,
+                        render: (t: any) => (
+                          <Text ellipsis={{ showTooltip: true }}>{String(t || '')}</Text>
+                        ),
+                      },
+                    ]}
+                  />
+
+                  <Divider margin="12px" />
+                  <Text type="tertiary" size="small">原始返回（JSON）：</Text>
+                  <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, marginTop: 6 }}>
+                    {JSON.stringify(lfResult, null, 2)}
+                  </pre>
                 </div>
               ) : (
                 <Text type="tertiary">暂无结果</Text>

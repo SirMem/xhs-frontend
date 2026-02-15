@@ -96,6 +96,25 @@ export async function apiCountNotesByTimeRange(apiBase: ApiBase, req: CountNotes
   return res.data;
 }
 
+export interface LowFanViralReq {
+  keyword: string;
+  cookies?: string;
+  like_threshold?: number;
+  fan_threshold?: number;
+  sort?: 'general' | 'popularity' | 'most_popular' | 'latest' | 'popularity_descending' | 'time_descending';
+  note_type?: 'all' | 'video' | 'image' | 0 | 1 | 2;
+  page_size?: number;
+  max_results?: number;
+  concurrency?: number;
+  cache_ttl_seconds?: number;
+  headless?: boolean;
+}
+
+export async function apiLowFanViral(apiBase: ApiBase, req: LowFanViralReq) {
+  const res = await client(apiBase, 120000).post('/xhs/low_fan_viral', req);
+  return res.data;
+}
+
 // -------------------------
 // Compliance
 // -------------------------
